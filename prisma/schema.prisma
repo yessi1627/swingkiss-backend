@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id            String   @id @default(uuid())
+  nombre        String
+  email         String   @unique
+  passwordHash  String
+  tipoCuenta    String
+  rol           String   @default("gratis")
+  fechaRegistro DateTime @default(now())
+  edad          Int?
+  ubicacion     String?
+  lat           Float?
+  lng           Float?
+  bio           String?
+  interesesJson String?
+  verificado    Boolean  @default(false)
+
+  resetCodigoHash   String?
+  resetCodigoExpira DateTime?
+
+  fotos             Foto[]
+  likesDados        Like[]                  @relation("LikesDados")
+  likesRecibidos     Like[]                  @relation("LikesRecibidos")
+  matchesComoA       Match[]                 @relation("MatchUsuarioA")
+  matchesComoB       Match[]                 @relation("MatchUsuarioB")
+  mensajes           Mensaje[]
+  eventosCreados     Evento[]
+  asistencias        EventoAsistente[]
+  solicitudesVerif   SolicitudVerificacion[]
+  reportesHechos     Reporte[]               @relation("ReportesHechos")
+  reportesRecibidos  Reporte[]               @relation("ReportesRecibidos")
+  bloqueosHechos     Bloqueo[]               @relation("BloqueosHechos")
+  bloqueosRecibidos  Bloqueo[]               @relation("BloqueosRecibidos")
+}
+
+model Foto {
+  id        String  @id @default(uuid())
+  usuarioId String
+  url       String
+  orden     Int     @default(0)
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id    String   @id @default(uuid())
+  deId  String
+  aId   String
+  fecha DateTime @default(now())
+  de    Usuario  @relation("LikesDados", fields: [deId], references: [id], onDelete: Cascade)
+  a     Usuario  @relation("LikesRecibidos", fields: [aId], references: [id], onDelete: Cascade)
+
+  @@unique([deId, aId])
+}
+
+model Match {
+  id         String    @id @default(uuid())
+  usuarioAId String
+  usuarioBId String
+  fecha      DateTime  @default(now())
+  usuarioA   Usuario   @relation("MatchUsuarioA", fields: [usuarioAId], references: [id], onDelete: Cascade)
+  usuarioB   Usuario   @relation("MatchUsuarioB", fields: [usuarioBId], references: [id], onDelete: Cascade)
+  mensajes   Mensaje[]
+
+  @@unique([usuarioAId, usuarioBId])
+}
+
+model Mensaje {
+  id       String   @id @default(uuid())
+  matchId  String
+  emisorId String
+  texto    String
+  fecha    DateTime @default(now())
+  leido    Boolean  @default(false)
+  match    Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  emisor   Usuario  @relation(fields: [emisorId], references: [id], onDelete: Cascade)
+}
+
+model Evento {
+  id            String            @id @default(uuid())
+  titulo        String
+  descripcion   String
+  fecha         DateTime
+  ubicacion     String
+  lat           Float?
+  lng           Float?
+  cupos         Int
+  creadorId     String
+  fechaCreacion DateTime          @default(now())
+  creador       Usuario           @relation(fields: [creadorId], references: [id], onDelete: Cascade)
+  asistentes    EventoAsistente[]
+}
+
+model EventoAsistente {
+  id        String   @id @default(uuid())
+  eventoId  String
+  usuarioId String
+  estado    String   @default("confirmado")
+  fecha     DateTime @default(now())
+  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([eventoId, usuarioId])
+}
+
+model SolicitudVerificacion {
+  id              String    @id @default(uuid())
+  usuarioId       String
+  fotoUrl         String
+  estado          String    @default("pendiente")
+  fechaSolicitud  DateTime  @default(now())
+  fechaResolucion DateTime?
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model Reporte {
+  id          String   @id @default(uuid())
+  reporterId  String
+  reportadoId String
+  motivo      String
+  descripcion String?
+  fecha       DateTime @default(now())
+  estado      String   @default("pendiente")
+  reporter    Usuario  @relation("ReportesHechos", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportado   Usuario  @relation("ReportesRecibidos", fields: [reportadoId], references: [id], onDelete: Cascade)
+}
+
+model Bloqueo {
+  id           String   @id @default(uuid())
+  bloqueadorId String
+  bloqueadoId  String
+  fecha        DateTime @default(now())
+  bloqueador   Usuario  @relation("BloqueosHechos", fields: [bloqueadorId], references: [id], onDelete: Cascade)
+  bloqueado    Usuario  @relation("BloqueosRecibidos", fields: [bloqueadoId], references: [id], onDelete: Cascade)
+
+  @@unique([bloqueadorId, bloqueadoId])
+}
